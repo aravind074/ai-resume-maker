@@ -3,8 +3,8 @@ import PyPDF2
 import io
 from pydantic import BaseModel
 from typing import Any
-from api.deps import CurrentUser
-from services import ats_service
+from backend.api.deps import CurrentUser
+from backend.services import ats_service
 
 router = APIRouter()
 
