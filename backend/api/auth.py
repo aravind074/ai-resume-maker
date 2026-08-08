@@ -1,8 +1,7 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Any
-import models
 import schemas
 from api.deps import SessionDep, CurrentUser
 from core.security import verify_password, get_password_hash, create_access_token
@@ -15,29 +14,34 @@ def register(*, db: SessionDep, user_in: schemas.UserCreate) -> Any:
     """
     Register a new user.
     """
-    user = db.query(models.User).filter(models.User.email == user_in.email).first()
-    if user:
+    users_ref = db.collection('users')
+    query = users_ref.where('email', '==', user_in.email).limit(1).stream()
+    if any(True for _ in query):
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
     
     hashed_password = get_password_hash(user_in.password)
-    db_user = models.User(
-        email=user_in.email,
-        hashed_password=hashed_password,
-        full_name=user_in.full_name,
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    user_data = {
+        "email": user_in.email,
+        "hashed_password": hashed_password,
+        "full_name": user_in.full_name,
+        "is_active": True,
+        "is_superuser": False,
+        "created_at": datetime.utcnow()
+    }
+    
+    _, user_ref = users_ref.add(user_data)
     
     # Auto-create empty profile
-    db_profile = models.Profile(user_id=db_user.id)
-    db.add(db_profile)
-    db.commit()
+    profile_data = {
+        "user_id": user_ref.id,
+    }
+    db.collection('profiles').add(profile_data)
     
-    return db_user
+    user_data["id"] = user_ref.id
+    return user_data
 
 @router.post("/login")
 def login(
@@ -46,16 +50,24 @@ def login(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    query = db.collection('users').where('email', '==', form_data.username).limit(1).stream()
+    docs = list(query)
+    
+    if not docs:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    elif not user.is_active:
+        
+    user_doc = docs[0]
+    user_data = user_doc.to_dict()
+    
+    if not verify_password(form_data.password, user_data.get("hashed_password")):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    elif not user_data.get("is_active", True):
         raise HTTPException(status_code=400, detail="Inactive user")
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": create_access_token(
-            user.id, expires_delta=access_token_expires
+            user_doc.id, expires_delta=access_token_expires
         ),
         "token_type": "bearer",
     }

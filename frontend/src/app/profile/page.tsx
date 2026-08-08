@@ -12,6 +12,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<any>({});
 
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get("/profile");
+      setProfileData(res.data);
+    } catch (err) {
+      console.error("Failed to fetch profile");
+    }
+  };
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
@@ -20,15 +29,6 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get("/profile/");
-      setProfileData(res.data);
-    } catch (err) {
-      console.error("Failed to fetch profile");
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -36,7 +36,7 @@ export default function ProfilePage() {
     const data = Object.fromEntries(formData.entries());
 
     try {
-      await api.put("/profile/", data);
+      await api.put("/profile", data);
       alert("Profile updated successfully!");
     } catch (err) {
       alert("Failed to update profile");

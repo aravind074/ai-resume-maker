@@ -10,7 +10,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserResponse(UserBase):
-    id: int
+    id: str
     is_active: bool
     created_at: datetime
 
@@ -33,8 +33,8 @@ class ProfileUpdate(ProfileBase):
     pass
 
 class ProfileResponse(ProfileBase):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
 
     class Config:
         from_attributes = True
@@ -48,7 +48,7 @@ class EducationBase(BaseModel):
     description: Optional[str] = None
 
 class EducationResponse(EducationBase):
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
@@ -62,7 +62,7 @@ class ExperienceBase(BaseModel):
     description: Optional[str] = None
 
 class ExperienceResponse(ExperienceBase):
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
@@ -73,7 +73,7 @@ class ProjectBase(BaseModel):
     link: Optional[str] = None
 
 class ProjectResponse(ProjectBase):
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
@@ -83,7 +83,7 @@ class SkillBase(BaseModel):
     level: Optional[str] = None
 
 class SkillResponse(SkillBase):
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
@@ -94,7 +94,7 @@ class CertificationBase(BaseModel):
     date: Optional[str] = None
 
 class CertificationResponse(CertificationBase):
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
@@ -109,8 +109,8 @@ class ResumeUpdate(ResumeBase):
     pass
 
 class ResumeFullResponse(ResumeBase):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     created_at: datetime
     updated_at: datetime
     educations: list[EducationResponse] = []
@@ -130,8 +130,8 @@ class InterviewAnswerRequest(BaseModel):
     answer_text: str
 
 class InterviewAnswerResponse(BaseModel):
-    id: int
-    question_id: int
+    id: str
+    question_id: str
     answer_text: str
     score: Optional[int] = None
     feedback: Optional[str] = None
@@ -140,8 +140,8 @@ class InterviewAnswerResponse(BaseModel):
         from_attributes = True
 
 class InterviewQuestionResponse(BaseModel):
-    id: int
-    session_id: int
+    id: str
+    session_id: str
     question_text: str
     question_order: int
     is_answered: bool
@@ -151,8 +151,8 @@ class InterviewQuestionResponse(BaseModel):
         from_attributes = True
 
 class InterviewSessionResponse(BaseModel):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     job_role: str
     created_at: datetime
     is_completed: bool

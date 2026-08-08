@@ -19,3 +19,6 @@ yarn-error.log
 .next/
 out/
 build/
+
+# Firebase secrets
+*serviceAccountKey*.json

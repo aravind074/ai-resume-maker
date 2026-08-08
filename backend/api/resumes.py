@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, List
-import models
+from datetime import datetime
+import uuid
 import schemas
 from api.deps import SessionDep, CurrentUser
 
@@ -14,7 +15,19 @@ def get_resumes(
     """
     Get all resumes for current user.
     """
-    resumes = db.query(models.Resume).filter(models.Resume.user_id == current_user.id).all()
+    user_id = current_user["id"]
+    query = db.collection('resumes').where('user_id', '==', user_id).stream()
+    
+    resumes = []
+    for doc in query:
+        r_data = doc.to_dict()
+        r_data["id"] = doc.id
+        # Ensure default empty lists for subcomponents
+        for key in ["educations", "experiences", "projects", "skills", "certifications"]:
+            if key not in r_data:
+                r_data[key] = []
+        resumes.append(r_data)
+        
     return resumes
 
 @router.post("/", response_model=schemas.ResumeFullResponse)
@@ -27,72 +40,87 @@ def create_resume(
     """
     Create new resume.
     """
-    resume = models.Resume(
-        title=resume_in.title,
-        user_id=current_user.id
-    )
-    db.add(resume)
-    db.commit()
-    db.refresh(resume)
-    return resume
+    user_id = current_user["id"]
+    resume_data = {
+        "title": resume_in.title,
+        "user_id": user_id,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "educations": [],
+        "experiences": [],
+        "projects": [],
+        "skills": [],
+        "certifications": []
+    }
+    
+    _, doc_ref = db.collection('resumes').add(resume_data)
+    resume_data["id"] = doc_ref.id
+    return resume_data
 
 @router.get("/{resume_id}", response_model=schemas.ResumeFullResponse)
 def get_resume(
-    resume_id: int,
+    resume_id: str,
     db: SessionDep,
     current_user: CurrentUser,
 ) -> Any:
     """
     Get specific resume by ID.
     """
-    resume = db.query(models.Resume).filter(
-        models.Resume.id == resume_id,
-        models.Resume.user_id == current_user.id
-    ).first()
-    if not resume:
+    doc_ref = db.collection('resumes').document(resume_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists or doc.to_dict().get("user_id") != current_user["id"]:
         raise HTTPException(status_code=404, detail="Resume not found")
-    return resume
+        
+    r_data = doc.to_dict()
+    r_data["id"] = doc.id
+    for key in ["educations", "experiences", "projects", "skills", "certifications"]:
+        if key not in r_data:
+            r_data[key] = []
+    return r_data
 
 @router.delete("/{resume_id}")
 def delete_resume(
-    resume_id: int,
+    resume_id: str,
     db: SessionDep,
     current_user: CurrentUser,
 ) -> Any:
     """
     Delete a resume.
     """
-    resume = db.query(models.Resume).filter(
-        models.Resume.id == resume_id,
-        models.Resume.user_id == current_user.id
-    ).first()
-    if not resume:
+    doc_ref = db.collection('resumes').document(resume_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists or doc.to_dict().get("user_id") != current_user["id"]:
         raise HTTPException(status_code=404, detail="Resume not found")
-    db.delete(resume)
-    db.commit()
+        
+    doc_ref.delete()
     return {"message": "Resume deleted successfully"}
-
-# --- Subcomponents (Education, Experience, etc.) would be added here ---
-# To save space in the initial scaffold, we provide basic endpoints for one subcomponent.
-# Others follow the exact same pattern.
 
 @router.post("/{resume_id}/education", response_model=schemas.EducationResponse)
 def add_education(
-    resume_id: int,
+    resume_id: str,
     *,
     db: SessionDep,
     edu_in: schemas.EducationBase,
     current_user: CurrentUser,
 ) -> Any:
-    resume = db.query(models.Resume).filter(
-        models.Resume.id == resume_id,
-        models.Resume.user_id == current_user.id
-    ).first()
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
+    doc_ref = db.collection('resumes').document(resume_id)
+    doc = doc_ref.get()
     
-    edu = models.Education(**edu_in.model_dump(), resume_id=resume.id)
-    db.add(edu)
-    db.commit()
-    db.refresh(edu)
-    return edu
+    if not doc.exists or doc.to_dict().get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=404, detail="Resume not found")
+        
+    r_data = doc.to_dict()
+    educations = r_data.get("educations", [])
+    
+    edu_item = edu_in.model_dump()
+    edu_item["id"] = uuid.uuid4().hex
+    
+    educations.append(edu_item)
+    doc_ref.update({
+        "educations": educations,
+        "updated_at": datetime.utcnow()
+    })
+    
+    return edu_item

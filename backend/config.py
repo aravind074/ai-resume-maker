@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AI Resume Maker"
@@ -12,16 +13,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "resume_maker"
-    SQLALCHEMY_DATABASE_URI: str | None = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.SQLALCHEMY_DATABASE_URI:
-            self.SQLALCHEMY_DATABASE_URI = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+    # Firebase
+    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
+    FIREBASE_CREDENTIALS_PATH: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore")
 

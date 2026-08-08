@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Any
-import models
 from api.deps import SessionDep, CurrentUser
 
 router = APIRouter()
 
-def check_superuser(current_user: models.User):
+def check_superuser(current_user: dict):
     # For demonstration, we'll allow any user to see admin stats or we can enforce is_superuser
-    # In a real app: if not current_user.is_superuser: raise HTTPException(...)
+    # In a real app: if not current_user.get("is_superuser"): raise HTTPException(...)
     pass
 
 @router.get("/stats")
@@ -20,11 +19,22 @@ def get_admin_stats(
     """
     check_superuser(current_user)
     
-    total_users = db.query(models.User).count()
-    total_resumes = db.query(models.Resume).count()
-    total_interviews = db.query(models.InterviewSession).count()
+    # In Firestore, count queries can be done like this:
+    total_users = db.collection('users').count().get()[0][0].value
+    total_resumes = db.collection('resumes').count().get()[0][0].value
+    total_interviews = db.collection('interview_sessions').count().get()[0][0].value
     
-    recent_users = db.query(models.User).order_by(models.User.created_at.desc()).limit(5).all()
+    recent_users_query = db.collection('users').order_by('created_at', direction='DESCENDING').limit(5).stream()
+    
+    recent_users = []
+    for doc in recent_users_query:
+        u_data = doc.to_dict()
+        recent_users.append({
+            "id": doc.id,
+            "email": u_data.get("email"),
+            "full_name": u_data.get("full_name"),
+            "created_at": u_data.get("created_at")
+        })
     
     return {
         "metrics": {
@@ -32,8 +42,5 @@ def get_admin_stats(
             "total_resumes": total_resumes,
             "total_interviews": total_interviews,
         },
-        "recent_users": [
-            {"id": u.id, "email": u.email, "full_name": u.full_name, "created_at": u.created_at} 
-            for u in recent_users
-        ]
+        "recent_users": recent_users
     }

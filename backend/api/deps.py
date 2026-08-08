@@ -1,27 +1,19 @@
-from typing import Generator, Annotated
+from typing import Generator, Annotated, Any, Dict
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from sqlalchemy.orm import Session
-from database import SessionLocal
+from google.cloud.firestore import Client
+from database import get_db
 from config import settings
-import models
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
 )
 
-def get_db() -> Generator:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-SessionDep = Annotated[Session, Depends(get_db)]
+SessionDep = Annotated[Client, Depends(get_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
-def get_current_user(session: SessionDep, token: TokenDep) -> models.User:
+def get_current_user(db: SessionDep, token: TokenDep) -> Dict[str, Any]:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -37,11 +29,17 @@ def get_current_user(session: SessionDep, token: TokenDep) -> models.User:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    user = session.query(models.User).filter(models.User.id == int(user_id)).first()
-    if not user:
+    
+    user_doc = db.collection('users').document(user_id).get()
+    if not user_doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
-    if not user.is_active:
+    
+    user = user_doc.to_dict()
+    user["id"] = user_doc.id
+    
+    if not user.get("is_active", True):
         raise HTTPException(status_code=400, detail="Inactive user")
+    
     return user
 
-CurrentUser = Annotated[models.User, Depends(get_current_user)]
+CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user)]
