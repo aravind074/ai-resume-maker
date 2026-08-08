@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Any
 import schemas
-from api.deps import SessionDep, CurrentUser
+from backend.api.deps import SessionDep, CurrentUser
 
 router = APIRouter()
 
