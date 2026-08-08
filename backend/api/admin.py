@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Any
-from api.deps import SessionDep, CurrentUser
+from backend.api.deps import SessionDep, CurrentUser
 
 router = APIRouter()
 
