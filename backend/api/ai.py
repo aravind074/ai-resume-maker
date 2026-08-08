@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Any
-from api.deps import CurrentUser
-from services import ai_service
+from backend.api.deps import CurrentUser
+from backend.services import ai_service
 
 router = APIRouter()
 
