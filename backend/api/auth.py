@@ -2,10 +2,10 @@ from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Any
-import schemas
-from api.deps import SessionDep, CurrentUser
-from core.security import verify_password, get_password_hash, create_access_token
-from config import settings
+from backend import schemas
+from backend.api.deps import SessionDep, CurrentUser
+from backend.core.security import verify_password, get_password_hash, create_access_token
+from backend.config import settings
 
 router = APIRouter()
 
