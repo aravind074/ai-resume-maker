@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Any
 from datetime import datetime
 import schemas
-from api.deps import SessionDep, CurrentUser
-from services import interview_service
+from backend.api.deps import SessionDep, CurrentUser
+from backend.services import interview_service
 
 router = APIRouter()
 
